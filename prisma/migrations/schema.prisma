@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========== USERS & AUTH ==========
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  password          String
+  role              Role      @default(CREATOR)
+  creatorId         String?
+  twoFactorSecret   String?
+  twoFactorEnabled  Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  creator           Creator?  @relation("UserCreator")
+  messages          Message[] @relation("UserMessages")
+  sentMessages      Message[] @relation("SentMessages")
+  subscriptions     Subscription[] @relation("SubscriberSubscriptions")
+  transactions      Transaction[] @relation("SubscriberTransactions")
+  media             Media[]
+
+  @@index([email])
+}
+
+enum Role {
+  CREATOR
+  MANAGER
+  ASSISTANT
+  MODERATOR
+  ADMIN
+}
+
+// ========== CREATORS ==========
+model Creator {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  displayName       String
+  subscriptionPrice Float    @default(0)
+  commissionRate    Float    @default(10)
+  status            CreatorStatus @default(ACTIVE)
+  settings          Json     @default("{}")
+  createdAt         DateTime @default(now())
+
+  user              User     @relation("UserCreator", fields: [userId], references: [id], onDelete: Cascade)
+  conversations     Conversation[]
+  subscriptions     Subscription[]
+  transactions      Transaction[]
+
+  @@index([userId])
+}
+
+enum CreatorStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+// ========== SUBSCRIPTIONS ==========
+model Subscription {
+  id            String    @id @default(uuid())
+  creatorId     String
+  subscriberId  String
+  isActive      Boolean   @default(true)
+  cancelledAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  creator       Creator   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  subscriber    User      @relation("SubscriberSubscriptions", fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId])
+  @@index([subscriberId])
+}
+
+// ========== CONVERSATIONS ==========
+model Conversation {
+  id            String    @id @default(uuid())
+  creatorId     String
+  subscriberId  String
+  lastMessageAt DateTime  @default(now())
+  unreadCount   Int       @default(0)
+  isVIP         Boolean   @default(false)
+  tags          String[]  @default([])
+  createdAt     DateTime  @default(now())
+
+  creator       Creator   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  messages      Message[]
+
+  @@index([creatorId])
+  @@index([subscriberId])
+  @@index([lastMessageAt])
+}
+
+// ========== MESSAGES ==========
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String
+  senderId       String
+  recipientId    String
+  content        String
+  mediaIds       String[]    @default([])
+  status         MessageStatus @default(SENT)
+  isVIP          Boolean     @default(false)
+  timestamp      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+  recipient      User         @relation("UserMessages", fields: [recipientId], references: [id])
+
+  @@index([conversationId, timestamp])
+  @@index([senderId])
+  @@index([recipientId])
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+// ========== MEDIA ==========
+model Media {
+  id            String      @id @default(uuid())
+  userId        String
+  filename      String
+  originalName  String
+  mimeType      String
+  size          BigInt
+  url           String
+  thumbnailUrl  String?
+  status        MediaStatus @default(PENDING)
+  tags          String[]    @default([])
+  uploadedAt    DateTime    @default(now())
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum MediaStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SENT
+}
+
+// ========== TRANSACTIONS ==========
+model Transaction {
+  id              String            @id @default(uuid())
+  creatorId       String
+  subscriberId    String
+  amount          Float
+  currency        String            @default("USD")
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+  stripePaymentId String?
+  createdAt       DateTime          @default(now())
+
+  creator         Creator           @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  subscriber      User              @relation("SubscriberTransactions", fields: [subscriberId], references: [id])
+
+  @@index([creatorId, createdAt])
+  @@index([subscriberId])
+}
+
+enum TransactionType {
+  SUBSCRIPTION
+  TIP
+  MEDIA_PURCHASE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ========== NOTIFICATIONS ==========
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
