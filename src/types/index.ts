@@ -1,5 +1,12 @@
 // Export de tous les types personnalisés
-import { Prisma, Role, CreatorStatus, MessageStatus, MediaStatus, TransactionStatus, TransactionType } from '@prisma/client';
+
+// Lightweight local definitions to avoid strong coupling with generated Prisma types
+export type Role = 'ADMIN' | 'CREATOR' | 'MANAGER' | 'ASSISTANT' | 'MODERATOR';
+export type CreatorStatus = string;
+export type MessageStatus = string;
+export type MediaStatus = string;
+export type TransactionStatus = string;
+export type TransactionType = string;
 
 // ========== TYPES D'ENTITÉS ==========
 
@@ -22,7 +29,7 @@ export interface Creator {
   subscriptionPrice: number;
   commissionRate: number;
   status: CreatorStatus;
-  settings: Prisma.JsonValue;
+  settings: any;
   createdAt: Date;
 }
 
@@ -332,8 +339,7 @@ export interface UserGrowthReport {
 }
 
 // ========== ENUMS RÉEXPORTÉS ==========
-
-export { Role, CreatorStatus, MessageStatus, MediaStatus, TransactionStatus, TransactionType };
+// (Local types defined above)
 
 // ========== TYPES DE CACHE ==========
 

@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { Prisma } from '@prisma/client';
 
 export const errorHandler = (
   err: any,
@@ -9,8 +8,8 @@ export const errorHandler = (
 ) => {
   console.error('Error:', err);
 
-  // Prisma errors
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+  // Prisma-like errors: check code property instead of instanceof check to avoid type issues
+  if (err && typeof err.code === 'string') {
     if (err.code === 'P2002') {
       return res.status(409).json({ error: 'Duplicate entry' });
     }

@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client';
+type Role = 'ADMIN' | 'CREATOR' | 'MANAGER' | 'ASSISTANT' | 'MODERATOR';
 
 type Permission = 'read' | 'write' | 'delete' | 'admin';
 
